@@ -1,0 +1,144 @@
+TASK 5
+Writing Join Queries, equivalent, and/or recursive queries:
+(Tool: SQL/ Oracle, ALM: Flipped Classroom)
+
+Aim: To Perform the advanced query processing and test its heuristics using designing of optimal correlated and nested sub queries such as finding summary statistics.
+5.1	To retrieve all cricket boards and their teams.
+5.2	To list all matches along with the teams and their captains.
+5.3	To count the number of matches played by each team.
+5.4	To find all the players who are part of the team named " TIGER ROCK ". 
+5.5	To retrieve all team details, including the count of winning matches for each team.
+5.6	To retrieve the total number of 'Tie' matches in a team-wise manner.
+5.7	To retrieve the team details who won the matches.
+5.8	To retrieve players and match details of players who are above 25 years old. 
+5.9	To retrieve the details of Team who have not played any matches.
+5.10	To retrieve the teamid, boardid, teamname, and playername for a particular playerid given.
+
+
+5.1	To retrieve all cricket boards and their teams.
+
+SQL> SELECT cb.Name AS CricketBoard, t.Name AS Team FROM CricketBoard cb JOIN Team t ON cb.BoardID = t.BoardID;
+
+CricketBoard	Team
+Chennai Cricket Board	ABS EXPRESS
+Chennai Cricket Board	AVG EXPRESS
+Tiruvallur Cricket Board	ANGRY BARD
+Tiruvallur Cricket Board	TIGER ROCK
+Trichy Cricket Board	ROCK
+Viluppuram Cricket Board	RAINBOW
+Madurai Cricket Board	PANTHER
+Tuticorin Cricket Board	THUNDER
+Selam Cricket Board	EAGLE
+Tiruppur Cricket Board	KINGS
+
+5.2	List all matches along with the teams and their captains.
+
+SQL>SELECT m.matchid, m.match_date, m.result, t1.teamid   AS team1_id, t1.name     AS team1_name, t1.captain  AS team1_captain, t2.teamid   AS team2_id, t2.name     AS team2_name, t2.captain  AS team2_captain FROM match m JOIN team t1 ON m.teamid1 = t1.teamid JOIN team t2 ON m.teamid2 = t2.teamid ORDER BY m.matchid;
+
+
+
+MATCHID    MATCH_DAT RESULT               TEAM1_ID   TEAM1_NAME                     TEAM1_CAPTAIN                  TEAM2_ID   TEAM2_NAME                     TEAM2_CAPTAIN
+--------------- ----------------------------------------- ------------------- ------------------- ------------------------------------------------ ------------------- -------------------------------- ------------------------------
+M01        22-JUN-22 TCB01 - WIN          CCB01      ABS EXPRESS                    SAMPATH KUMAR                  TCB01      ANGRY BARD                     CINIL JOHN
+M02        22-JUN-22 CCB01 - WIN          CCB02      AVG EXPRESS                    Y.JOHN                         	TCB02      TIGER ROCK                     BEN GEORGE
+M03        24-JUN-22 TCB01 - WIN          TRICB01    ROCK                           K.MUTHU                        	TCB01      ANGRY BARD                     CINIL JOHN
+M04        25-JUN-22 TRICB01 - WIN        TRICB01    ROCK                           K.MUTHU                        	TCB02      TIGER ROCK                     BEN GEORGE
+M05        27-JUN-25 TRICB01 - Tie        TRICB01    ROCK         K.MUTHU                        	TCB02      TIGER ROCK                     BEN GEORGE
+
+
+5.3	Count the number of matches played each team.
+
+SQL>SELECT t.teamid, t.name       AS team_name, COUNT(m.matchid) AS matches_played FROM team t JOIN match m ON t.teamid = m.teamid1 OR t.teamid = m.teamid2 GROUP BY t.teamid, t.name ORDER BY matches_played DESC
+
+TEAMID     TEAM_NAME          MATCHES_PLAYED
+---------- ------------------------------ --------------
+TRICB01    ROCK                                        3
+TCB02      TIGER ROCK                           3
+TCB01      ANGRY BARD                         2
+CCB02      AVG EXPRESS                        1
+CCB01      ABS EXPRESS                         1
+
+SQL>
+
+5.4	To find all the players who are part of the team named "TIGER ROCK".
+
+SQL> SELECT p.playerID, p.fname, p.teamID, t.coach, t.captain FROM player p JOIN team t ON p.teamID = t.teamID WHERE t.name = 'TIGER ROCK';
+
+PLAYER FNAME                          TEAMID     COACH                          CAPTAIN
+----------- ------------------------------ ---------- ------------------------------ ------------------------------
+102    Akash                          	TCB02      S.KANNAN                       BEN GEORGE
+12     Premkumar                      	TCB02      S.KANNAN                       BEN GEORGE
+
+
+
+5.5	To retrieve all team details, including the count of winning matches for each team.
+
+SQL> SELECT t.TeamID, t.Name AS TeamName, t.Coach, t.Captain, COUNT(m.MatchID) AS WinningMatchCount FROM Team t LEFT JOIN Match m ON t.TeamID = substr(m.result,1,5) GROUP BY t.TeamID, t.Name, t.Coach, t.Captain;
+
+Output:
+TEAMID     TEAMNAME                       COACH                          CAPTAIN                        WINNINGMATCHCOUNT
+---------- ------------------------------ ------------------------------ ------------------------------ -----------------
+TRICB01    ROCK                           K.PAUL                         K.MUTHU                                        0
+CCB02      AVG EXPRESS           T.KARTHIK                  Y.JOHN                                         0
+SCB01      EAGLE                         SOMU                           SRI HARI                                       0
+MCB01      PANTHER                   SARAVANAN               R.SUNILKUMAR                                   0
+TUCB01     THUNDER                   D ALEX                         BARATHI                                        0
+TCB01      ANGRY BARD            TOM BABU                  CINIL JOHN                                     2
+VCB01      RAINBOW                   S.RAJESHKUMAR      MANIMARAN                                      0
+TCB02      TIGER ROCK               S.KANNAN                  BEN GEORGE                                     0
+CCB01      ABS EXPRESS             G.D.RAMESH                  SAMPATH KUMAR                        1
+TICB01     KINGS                          D ANAND                        MATHAN                                         0
+
+10 rows selected.
+
+
+5.6 To retrieve the total number of 'Tie' matches in a team-wise manner.
+
+SQL>SELECT t.teamid,t.name AS team_name,COUNT(m.matchid) AS tie_matchesFROM team tJOIN match mON (t.teamid = m.teamid1 OR t.teamid = m.teamid2)WHEREUPPER(m.result) LIKE '%TIE%'GROUP BY t.teamid, t.nameORDER BY tie_matches DESC;
+
+TEAMID     TEAM_NAME                      TIE_MATCHES
+---------- -------------------------------------- -----------
+TCB02      TIGER ROCK                        1
+TRICB01    ROCK                                     1
+
+5.7. To retrieve the team details who won the matches.
+
+SQL>SELECT DISTINCT t.teamid, t.boardid, t.name       AS team_name, t.coach, t.captainFROM team tJOIN match mON ( (INSTR(m.result, m.teamid1) > 0 AND t.teamid = m.teamid1) OR (INSTR(m.result, m.teamid2) > 0 AND t.teamid = m.teamid2) );
+
+TEAMID     BOARDID    TEAM_NAME                      COACH                CAPTAIN
+---------- ------------------ ------------------------------ --------------------------- -------------------
+TCB01      BID02      ANGRY BARD                     TOM BABU            CINIL JOHN
+TRICB01    BID04      ROCK                           	K.PAUL                  K.MUTHU
+
+
+5.8	To retrieve players and match details of players who are above 25 years old.
+
+SQL>SELECT p.playerid,p.fname, p.lname, p.age, p.playingrole,t.teamid,t.name AS team_name,m.matchid,m.match_date,m.resultFROM player pJOIN team t ON p.teamid = t.teamidJOIN match mON (t.teamid = m.teamid1 OR t.teamid = m.teamid2)WHERE p.age > 25
+ORDER BY p.playerid, m.matchid;
+
+PLAYER FNAME                          LNAME                      AGE PLAYINGROLE    TEAMID     TEAM_NAME           MATCHID    MATCH_DAT RESULT
+------ ------------------------------ ------------------------------ ---------- ------------------------- ---------- ------------------------------ ------------------ ------------- --------------------
+1      Raj                            N                                 27 Bowler                    CCB01      ABS EXPRESS             M01        22-JUN-22 TCB01 - WIN
+
+5.9	To retrieve the details of Team who have not played any matches.
+
+SQL>SELECT t.teamid,t.boardid,t.name       AS team_name, t.coach,t.captainFROM team tWHERE t.teamid NOT IN (SELECT teamid1 FROM matchUNIONSELECT teamid2 FROM match);
+
+TEAMID     BOARDID    TEAM_NAME                      COACH                          CAPTAIN
+---------- ---------- ------------------------------ ------------------------------ ------------------------------
+VCB01      BID03      RAINBOW                        S.RAJESHKUMAR              MANIMARAN
+MCB01      BID05      PANTHER                        SARAVANAN                      R.SUNILKUMAR
+TUCB01   BID06      THUNDER                        D ALEX                         BARATHI
+SCB01      BID07      EAGLE                          SOMU                           SRI HARI
+TICB01     BID08      KINGS                          D ANAND                        MATHAN
+
+5.10	To retrieve the teamid, boardid, teamname, and playername for a particular playerid given.
+
+SQL> SELECT t.teamid, t.boardid, t.name, p.fname FROM team t JOIN player p ON t.teamid = p.teamid WHERE p.playerid = '66';
+TEAMID     BOARDID    NAME                           FNAME
+-------------- ---------------- ---------------------------- ------------------------------
+VCB01      BID03      RAINBOW                        Ganesh
+
+
+Result:
+Thus the query using Join Queries, equivalent, and/or recursive queries has been done successfully.
